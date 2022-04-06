@@ -1,3 +1,8 @@
+import subprocess
+import os.path, os
+import numpy as np
+import pandas as pd
+
 class snp_graph(Dataset):
     """
     1000 genomes snp graph dataset
@@ -29,7 +34,15 @@ class snp_graph(Dataset):
         self.dtype = np.float32
         self.mask_tr = self.mask_va = self.mask_te = None
         super().__init__(**kwargs)
-     
+
+    @staticmethod
+    def run_bash(bashCommand:str, nameCommand = ''):
+        process = subprocess.Popen([bashCommand], 
+                           shell=True)
+        _, error = process.communicate()
+        if error:
+            print(f'{nameCommand} error:\n', error)
+
     def read(self):
         def subset_nodes(start_nodes, G, subgraph_set, sub_graph_size = 1000):
             # Большая часть кода создает однокомпанентный подграф с вершинами
@@ -218,11 +231,18 @@ class snp_graph(Dataset):
                       a = a, 
                       e = e,
                       y = y)]
-
+    
+    @staticmethod
     def download(self):
-        print('Downloading nodes...')
-        !test -f ./1K_nodes.csv.gz || \
-        wget -q https://raw.githubusercontent.com/cappelchi/Datasets/master/1K_nodes.csv.gz
-        print('Downloading edges...')
-        !test -f ./1K_graph_edges_with_zscore.csv.gz || \
-        wget -q -O 1K_graph_edges_with_zscore.csv.gz https://getfile.dokpub.com/yandex/get/https://disk.yandex.ru/d/7--he9iQyVPhHg
+        if not os.path.isfile('./1K_nodes.csv.gz'):
+            print('Downloading nodes...')
+            bashCommand = f"""
+            wget -q https://raw.githubusercontent.com/cappelchi/Datasets/master/1K_nodes.csv.gz
+            """
+            run_bash (bashCommand, 'Downloading nodes error: ')
+        if not os.path.isfile('./1K_graph_edges_with_zscore.csv.gz'):
+            print('Downloading edges...')
+            bashCommand = f"""
+            wget -q -O 1K_graph_edges_with_zscore.csv.gz https://getfile.dokpub.com/yandex/get/https://disk.yandex.ru/d/7--he9iQyVPhHg
+            """
+            run_bash (bashCommand, 'Downloading edges error: ')
