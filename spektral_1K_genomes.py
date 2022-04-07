@@ -2,6 +2,16 @@ import subprocess
 import os.path, os
 import numpy as np
 import pandas as pd
+import snap
+import pickle
+import yaml
+from tqdm import tqdm
+from time import time
+from scipy import sparse as sp
+from spektral.data import Dataset, Graph
+from sklearn.model_selection import train_test_split
+from random import shuffle
+
 
 class snp_graph(Dataset):
     """
@@ -22,7 +32,7 @@ class snp_graph(Dataset):
                  # 'weight', 'zref'
                  use_weight_in_adjency = True, # использовать в adjency [0, 1] 
                  # или weight
-                 labels = ['centromere_rel_pos'], # укзать выход через list
+                 labels = ['p'], # укзать выход через list
                  # 'centromere_rel_pos', 'p' - float
                  # 'chromosome', 'ref', 'alt', 'homhet' - категориальные
                  **kwargs):
@@ -35,8 +45,7 @@ class snp_graph(Dataset):
         self.mask_tr = self.mask_va = self.mask_te = None
         super().__init__(**kwargs)
 
-    @staticmethod
-    def run_bash(bashCommand:str, nameCommand = ''):
+    def run_bash(self, bashCommand:str, nameCommand = ''):
         process = subprocess.Popen([bashCommand], 
                            shell=True)
         _, error = process.communicate()
@@ -60,10 +69,7 @@ class snp_graph(Dataset):
             if not hop_set:
                 return subgraph_set
             return(subset_nodes(hop_set, G, subgraph_set, sub_graph_size = sub_graph_size))
-        import snap
-        from random import shuffle
-        from tqdm import tqdm
-        import pickle
+
         usecols = ['source', 'target']
         if self.edge_features:
             usecols += self.edge_features
@@ -232,17 +238,16 @@ class snp_graph(Dataset):
                       e = e,
                       y = y)]
     
-    @staticmethod
     def download(self):
         if not os.path.isfile('./1K_nodes.csv.gz'):
             print('Downloading nodes...')
             bashCommand = f"""
             wget -q https://raw.githubusercontent.com/cappelchi/Datasets/master/1K_nodes.csv.gz
             """
-            run_bash (bashCommand, 'Downloading nodes error: ')
+            self.run_bash (bashCommand, 'Downloading nodes error: ')
         if not os.path.isfile('./1K_graph_edges_with_zscore.csv.gz'):
             print('Downloading edges...')
             bashCommand = f"""
             wget -q -O 1K_graph_edges_with_zscore.csv.gz https://getfile.dokpub.com/yandex/get/https://disk.yandex.ru/d/7--he9iQyVPhHg
             """
-            run_bash (bashCommand, 'Downloading edges error: ')
+            self.run_bash (bashCommand, 'Downloading edges error: ')
