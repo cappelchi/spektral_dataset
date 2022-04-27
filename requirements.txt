@@ -1,2 +1,3 @@
 spektral
 snap-stanford
+pyyaml
