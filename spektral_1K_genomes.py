@@ -3,14 +3,9 @@ import os.path, os
 import numpy as np
 import pandas as pd
 import snap
-import pickle
-import yaml
 from tqdm import tqdm
-from time import time
 from scipy import sparse as sp
 from spektral.data import Dataset, Graph
-from sklearn.model_selection import train_test_split
-from random import shuffle
 
 
 class snp_graph(Dataset):
@@ -170,15 +165,3 @@ class snp_graph(Dataset):
                 wget -q -O 1K_graph_edges_with_zscore.csv.gz https://getfile.dokpub.com/yandex/get/https://disk.yandex.ru/d/J-SWE1p9hSWTqw
                 """
                 self.run_bash (bashCommand, 'Downloading edges error: ')
-
-
-
-dataset = snp_graph(amount = 100,
-                    node_features = ['p'],
-                    edge_features = None, #['weight'], #None
-                    use_weight_in_adjency = True,
-                    labels = ['p'],
-                    #transforms=[AdjToSpTensor()]
-                        )
-
-print(dataset)
