@@ -81,7 +81,7 @@ class snp_graph(Dataset):
             usecols += self.node_features
         if self.labels:
             usecols += self.labels
-        print('Read nodes....')
+        print('Read nodes.....')
         nodes_df = pd.read_csv('./1K_nodes.csv.gz',
                                compression='gzip',
                                usecols = usecols)
