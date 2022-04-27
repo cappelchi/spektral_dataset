@@ -1,5 +1,6 @@
 import subprocess
 import os.path, os
+import random
 import numpy as np
 import pandas as pd
 import snap
@@ -113,8 +114,7 @@ class snp_graph(Dataset):
         print(f'find & skiped self edges: {selfedges}')
         edges_df = edges_df.set_index(['source', 'target']) # Переиндексация на мультииндекс
         graphs_list = []
-        for graph_cnt in range(self.amount):
-            rnd_node = S.GetRndNId(snap.TRnd(42))
+        for rnd_node in tqdm(random.sample(node_set, self.amount)):
             subgraph_set = subset_nodes({rnd_node}, S, {rnd_node},
                                         sub_graph_size = self.graph_size,
                                         min_hops = self.hops)
@@ -145,7 +145,7 @@ class snp_graph(Dataset):
                 e = None
             x = nodes_df.values[list(subgraph_set)]
             y = x[list(subgraph_set).index(rnd_node)].copy()
-            x[list(subgraph_set).index(rnd_node)] = 0
+            x[list(subgraph_set).index(rnd_node)] = np.nan
             graphs_list.append(Graph(x = x.astype(self.dtype),
                                       a = a,
                                       e = e,
