@@ -114,7 +114,8 @@ class snp_graph(Dataset):
         print(f'find & skiped self edges: {selfedges}')
         edges_df = edges_df.set_index(['source', 'target']) # Переиндексация на мультииндекс
         graphs_list = []
-        for rnd_node in tqdm(random.sample(node_set, self.amount)):
+        for sample_node in tqdm(random.sample(node_set, self.amount)):
+            rnd_node = int(sample_node)
             subgraph_set = subset_nodes({rnd_node}, S, {rnd_node},
                                         sub_graph_size = self.graph_size,
                                         min_hops = self.hops)
@@ -165,3 +166,5 @@ class snp_graph(Dataset):
                 wget -q -O 1K_graph_edges_with_zscore.csv.gz https://getfile.dokpub.com/yandex/get/https://disk.yandex.ru/d/J-SWE1p9hSWTqw
                 """
                 self.run_bash (bashCommand, 'Downloading edges error: ')
+
+
