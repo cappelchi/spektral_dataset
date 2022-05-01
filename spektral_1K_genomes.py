@@ -169,11 +169,3 @@ class snp_graph(Dataset):
                 wget -q -O 1K_graph_edges_with_zscore.csv.gz https://getfile.dokpub.com/yandex/get/https://disk.yandex.ru/d/J-SWE1p9hSWTqw
                 """
                 self.run_bash (bashCommand, 'Downloading edges error: ')
-
-graph = snp_graph(amount = 100,
-    node_features = None,
-    edge_features = True, #['weight'], #None
-    use_weight_in_adjency = True,
-    labels = ['p'],
-    #transforms=[AdjToSpTensor()]
-                )
