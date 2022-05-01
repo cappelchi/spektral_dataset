@@ -21,10 +21,10 @@ class snp_graph(Dataset):
     """
 
     def __init__(self, amount=1000,
-                 node_features = ['p'], # укзать фичи для вершин через list 
+                 node_features = None, # укзать фичи для вершин через list
                  #'p', 'centromere_rel_pos' - float, 
                  #'chromosome', 'ref', 'alt', 'homhet' - категориальные
-                 edge_features = ['weight'], # укзать фичи для рёбер через list
+                 edge_features = True, # укзать фичи для рёбер через list
                  # 'weight', 'zref'
                  use_weight_in_adjency = True, # использовать в adjency [0, 1] 
                  # или weight
@@ -42,7 +42,6 @@ class snp_graph(Dataset):
         self.graph_size = graph_size
         self.hops = hops
         self.dtype = np.float32
-        self.mask_tr = self.mask_va = self.mask_te = None
         super().__init__(**kwargs)
 
     def run_bash(self, bashCommand:str, nameCommand = ''):
@@ -72,22 +71,22 @@ class snp_graph(Dataset):
                 return subgraph_set
             return (subset_nodes(hop_set, G, subgraph_set, sub_graph_size=sub_graph_size, min_hops=min_hops))
         # Загружаем ноды в датафрейм
-        usecols = []
-        if self.node_features:
-            usecols += self.node_features
-        if self.labels:
-            usecols += self.labels
+        usecols = ['p']
+        #if self.node_features:
+        #    usecols += self.node_features
+        #if self.labels:
+        #    usecols += self.labels
         print('Read nodes.....')
         nodes_df = pd.read_csv('./1K_nodes.csv.gz',
                                compression='gzip',
                                usecols = usecols)
         # Загружаем рёбра в датафрейм
-        usecols = ['source', 'target']
-        if self.edge_features:
-            usecols += self.edge_features
-        if self.use_weight_in_adjency:
-            if 'weight' not in usecols: #if 'weight' not in usecols:
-                usecols += ['weight'] #usecols += ['weight']
+        usecols = ['source', 'target', 'zref']
+        #if self.edge_features:
+        #    usecols += self.edge_features
+        #if self.use_weight_in_adjency:
+        #    if 'weight' not in usecols: #if 'weight' not in usecols:
+        #        usecols += ['weight'] #usecols += ['weight']
         print('Read edges.......')
         edges_df = pd.read_csv(
                 './1K_graph_edges_with_zscore.csv.gz',
@@ -114,6 +113,7 @@ class snp_graph(Dataset):
         print(f'find & skiped self edges: {selfedges}')
         edges_df = edges_df.set_index(['source', 'target']) # Переиндексация на мультииндекс
         graphs_list = []
+        print(f'Generating {self.amount} subgraphs...........')
         for sample_node in tqdm(random.sample(node_set, self.amount)):
             rnd_node = int(sample_node)
             subgraph_set = subset_nodes({rnd_node}, S, {rnd_node},
@@ -122,10 +122,11 @@ class snp_graph(Dataset):
             s = S.GetSubGraph(list(subgraph_set))
             subgraph_edges_idx = [[ed.GetSrcNId(), ed.GetDstNId()] for ed in s.Edges()]
             if self.use_weight_in_adjency:
-                adj = np.hstack((edges_df.loc[subgraph_edges_idx].weight.values,
-                                 edges_df.loc[subgraph_edges_idx].weight.values))
+                adj = np.hstack((np.abs(edges_df['zref'][subgraph_edges_idx].values / 30),
+                                 np.abs(edges_df['zref'][subgraph_edges_idx].values / 30)))
             else:
                 adj = np.ones(len(subgraph_edges_idx) * 2)
+            adj[np.flip(np.array(subgraph_edges_idx), axis= 1).flatten('F') == rnd_node] = 0
             idx_dict = {idx: nidx for idx, nidx in
                         zip(np.unique(subgraph_edges_idx), np.arange(len(np.unique(subgraph_edges_idx))))}
             row = [idx_dict[idx] for idx in np.array(subgraph_edges_idx)[:, 0]]
@@ -137,17 +138,19 @@ class snp_graph(Dataset):
             cx = sp.coo_matrix(a_idx)
             index_list = [int(v) for v in cx.data]
             if self.edge_features:
-                e = edges_df[self.edge_features].values
-                e = e[subgraph_edges_idx]
-                e = e.astype(self.dtype)
-                e = np.vstack((e, e))
-                e = e[index_list]
+                e = np.hstack(((edges_df.zref[subgraph_edges_idx].values > 0),
+                                   ~(edges_df.zref[subgraph_edges_idx].values > 0)))
+                e = np.vstack((e, ~e)).T.astype(np.int16)
+                e = e[index_list,:]
             else:
                 e = None
-            x = nodes_df.values[list(subgraph_set)]
-            y = x[list(subgraph_set).index(rnd_node)].copy()
-            x[list(subgraph_set).index(rnd_node)] = np.nan
-            graphs_list.append(Graph(x = x.astype(self.dtype),
+            if self.node_features:
+                x = np.ones(len(subgraph_set)).reshape(-1, 1).astype(np.float32) * self.node_features
+            else:
+                x = None
+            y = nodes_df.values[rnd_node].copy()
+            #x[list(subgraph_set).index(rnd_node)] = 0 #np.nan
+            graphs_list.append(Graph(x = x,
                                       a = a,
                                       e = e,
                                       y = y.astype(self.dtype)))
@@ -167,4 +170,10 @@ class snp_graph(Dataset):
                 """
                 self.run_bash (bashCommand, 'Downloading edges error: ')
 
-
+graph = snp_graph(amount = 100,
+    node_features = None,
+    edge_features = True, #['weight'], #None
+    use_weight_in_adjency = True,
+    labels = ['p'],
+    #transforms=[AdjToSpTensor()]
+                )
