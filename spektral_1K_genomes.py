@@ -14,20 +14,15 @@ class snp_graph(Dataset):
     1000 genomes snp graph dataset
     https://docs.google.com/presentation/d/1OZS95WpLmscVKUnstQax5e6Ulplx53OsJjxyM50NMvU/edit?usp=sharing
     **Arguments**
-    - `amount`: int, load this many molecules instead of the full dataset
-    (useful for debugging).
-    edge_features : weight, zscore
-    node_features : p, chromosome, ref, centromere_rel_pos, homhet
+    - `amount`: int, subgraphs quantity.
+    edge_features : use sign of zscore
+    node_features : without node features
     """
 
     def __init__(self, amount=1000,
-                 node_features = None, # укзать фичи для вершин через list
-                 #'p', 'centromere_rel_pos' - float, 
-                 #'chromosome', 'ref', 'alt', 'homhet' - категориальные
-                 edge_features = True, # укзать фичи для рёбер через list
-                 # 'weight', 'zref'
-                 use_weight_in_adjency = True, # использовать в adjency [0, 1] 
-                 # или weight
+                 node_features = 1, #любое число
+                 edge_features = False, # используем знак zscore как фичу для вершины
+                 use_weight_in_adjency = True, # использовать zscore в adjency [0, 1]
                  labels = ['p'], # укзать выход через list
                  # 'centromere_rel_pos', 'p' - float
                  # 'chromosome', 'ref', 'alt', 'homhet' - категориальные
@@ -72,21 +67,12 @@ class snp_graph(Dataset):
             return (subset_nodes(hop_set, G, subgraph_set, sub_graph_size=sub_graph_size, min_hops=min_hops))
         # Загружаем ноды в датафрейм
         usecols = ['p']
-        #if self.node_features:
-        #    usecols += self.node_features
-        #if self.labels:
-        #    usecols += self.labels
         print('Read nodes.....')
         nodes_df = pd.read_csv('./1K_nodes.csv.gz',
                                compression='gzip',
                                usecols = usecols)
         # Загружаем рёбра в датафрейм
         usecols = ['source', 'target', 'zref']
-        #if self.edge_features:
-        #    usecols += self.edge_features
-        #if self.use_weight_in_adjency:
-        #    if 'weight' not in usecols: #if 'weight' not in usecols:
-        #        usecols += ['weight'] #usecols += ['weight']
         print('Read edges.......')
         edges_df = pd.read_csv(
                 './1K_graph_edges_with_zscore.csv.gz',
@@ -126,7 +112,7 @@ class snp_graph(Dataset):
                                  np.abs(edges_df['zref'][subgraph_edges_idx].values / 30)))
             else:
                 adj = np.ones(len(subgraph_edges_idx) * 2)
-            adj[np.flip(np.array(subgraph_edges_idx), axis= 1).flatten('F') == rnd_node] = 0
+            adj[np.array(subgraph_edges_idx).flatten('F') == rnd_node] = 0
             idx_dict = {idx: nidx for idx, nidx in
                         zip(np.unique(subgraph_edges_idx), np.arange(len(np.unique(subgraph_edges_idx))))}
             row = [idx_dict[idx] for idx in np.array(subgraph_edges_idx)[:, 0]]
@@ -144,12 +130,9 @@ class snp_graph(Dataset):
                 e = e[index_list,:]
             else:
                 e = None
-            if self.node_features:
-                x = np.ones(len(subgraph_set)).reshape(-1, 1).astype(np.float32) * self.node_features
-            else:
-                x = None
+            x = np.ones(len(subgraph_set)).reshape(-1, 1).astype(np.float32) * self.node_features
+
             y = nodes_df.values[rnd_node].copy()
-            #x[list(subgraph_set).index(rnd_node)] = 0 #np.nan
             graphs_list.append(Graph(x = x,
                                       a = a,
                                       e = e,
@@ -169,3 +152,12 @@ class snp_graph(Dataset):
                 wget -q -O 1K_graph_edges_with_zscore.csv.gz https://getfile.dokpub.com/yandex/get/https://disk.yandex.ru/d/J-SWE1p9hSWTqw
                 """
                 self.run_bash (bashCommand, 'Downloading edges error: ')
+
+graph = snp_graph(amount = 100,
+                node_features = 1,
+                edge_features = False, #['weight'], #None
+                use_weight_in_adjency = True,
+                labels = ['p'],
+                #transforms=[AdjToSpTensor()]
+                )
+
