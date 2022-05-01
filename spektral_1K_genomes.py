@@ -153,11 +153,4 @@ class snp_graph(Dataset):
                 """
                 self.run_bash (bashCommand, 'Downloading edges error: ')
 
-graph = snp_graph(amount = 100,
-                node_features = 1,
-                edge_features = False, #['weight'], #None
-                use_weight_in_adjency = True,
-                labels = ['p'],
-                #transforms=[AdjToSpTensor()]
-                )
 
