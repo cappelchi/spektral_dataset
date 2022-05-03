@@ -13040,3 +13040,5 @@ tags
 !/code_test.py
 !/1k_dataset.ipynb
 !/1K_dataset.ipynb
+!/1K_pop_snp_prob.csv.gz
+!/pop_edges.cs.gzv
